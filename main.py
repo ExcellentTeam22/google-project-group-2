@@ -48,7 +48,15 @@ def my_intersection(set_1, set_2):
 
 
 def relevant_matching(matchings: list) -> list:
-    return [matching[1] for matching in matchings if matching[0][2] + 1 == matching[1][2]]
+    ret = []
+    for matching in matchings:
+        for i in range(len(matching)):
+            for j in range(len(matching)):
+                if matching[i][2] + 1 == matching[j][2]:
+                    ret.append(matching[j])
+    return ret
+
+    # return [matching[1] for matching in matchings if matching[0][2] + 1 == matching[1][2]]
 
 
 # noa
@@ -65,14 +73,14 @@ def suggest_correction(word: str) -> list:
             new_lst[i] = letter
             new_word = "".join(new_lst)
             if new_word in existing_words:
-                correct_words += [new_word]
+                correct_words += [str(new_word)]
         new_lst = list(word)
 
         # remove letter
         new_lst[i] = ''
         new_word = "".join(new_lst)
         if new_word in existing_words:
-            correct_words += [new_word]
+            correct_words += [str(new_word)]
         new_lst = list(word)
 
         # add a letter
@@ -81,17 +89,15 @@ def suggest_correction(word: str) -> list:
             new_lst1[i] = letter
             new_word = "".join(new_lst1)
             if new_word in existing_words:
-                correct_words += [new_word]
+                correct_words += [str(new_word)]
         new_lst = list(word)
-    return list(set(correct_words))
+    my_set = set(correct_words)
+    my_set.add(word)
+    my_set.remove(word)
+    return list(my_set)
 
 
-# odelia
-def get_best_k_completions(l: list, s: str) -> list:
-    return list(set(l))
-
-
-def search_proper_sentence(substring: str) -> list:
+def only_complete_words(substring: str) -> list:
     optional_sentences = []
     lists_of_closed_words = []
     substring_list = substring.split(" ")
@@ -105,42 +111,59 @@ def search_proper_sentence(substring: str) -> list:
         return []
     if sum_of_wrong_words == 1:
         lists_of_closed_words.append(suggest_correction(wrong_word))
-        print("lists_of_closed_words: ", lists_of_closed_words)
         list_of_closed_words = lists_of_closed_words[0]
-        print("list_of_closed_words: ", list_of_closed_words)
         for closed_word in list_of_closed_words:
             optional_sentences.append(substring.replace(wrong_word, closed_word))
-        print("optional_sentences: ", optional_sentences)
+            # optional_sentences.append(substring.replace(" "+wrong_word+" ", " "+closed_word+" "))
     if sum_of_wrong_words == 0:
+        optional_sentences.append(substring)
         for word in substring_list:
             lists_of_closed_words.append(suggest_correction(word))
         for i in range(len(lists_of_closed_words)):
             for closed_words in lists_of_closed_words[i]:
                 optional_sentences.append(substring.replace(substring_list[i], closed_words))
+    print("lists_of_closed_words: ", lists_of_closed_words)
+    print("optional_sentences: ", optional_sentences)
     relevant_sentences = []
     for optional_sentence in optional_sentences:
         relevant_sentences += (search_substring(optional_sentence))
-    return get_best_k_completions(relevant_sentences, substring)
+    return list(set(relevant_sentences))
+
+
+def search_proper_sentence(substring: str) -> list:
+    while substring[0] == " ":
+        substring = substring[1:]
+    if substring[-1] != " ":
+        return only_complete_words(substring)
+    while substring[-1] == " ":
+        substring = substring[:-1]
+    return only_complete_words(substring)
 
 
 def search_substring(substring: str):
+    print("substring: ", substring)
     match_1 = []
     if " " not in substring:  # One word search
         # (looking for part of word)
         # match = [value for key, value in GLOBAL_DICT.items() if substring in key]
         # (only complete word)
         match_1 = GLOBAL_DICT.get(substring)
+        if match_1 == None:
+            match_1 = []
     else:  # If the search has more than one word
         substring_list = substring.split(" ")
         # list of indexes for first word
         match_1 = GLOBAL_DICT.get(substring_list[0])
-
+        if match_1 == None:
+            match_1 = []
         for word in substring_list[1:]:
             # list of indexes for first word
             match_2 = GLOBAL_DICT.get(word)
+            if match_2 == None:
+                match_2 = []
             # list of pair lists, each pair has the same line and file, and different index
-            # print("match_2: ", match_2)
             # print("match_1: ", match_1)
+            # print("match_2: ", match_2)
             intersection = my_intersection(match_1, match_2)
             # print("intersection: ", intersection)
             if intersection == []:
@@ -167,6 +190,8 @@ if __name__ == '__main__':
     initialization(PATH_OF_TEXT)
     # online
     substring = handle_input(input("Enter your text:"))
+    while substring[0] == " ":
+        substring = substring[1:]
     while "#" not in substring:
         print("Here are the suggestions:")
         list_of_sentences_with_substring = search_proper_sentence(substring)
